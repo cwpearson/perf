@@ -34,6 +34,7 @@ public:
    */
   INLINE void enable() {
     ioctl(fd_, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+    fprintf(stderr, "enable(): %s\n", strerror(errno));
   }
   /* inline to avoid extra instructions
    */

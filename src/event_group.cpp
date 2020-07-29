@@ -29,30 +29,21 @@ void EventGroup::add(unsigned int type, unsigned long long config) {
   int cpu = -1;  // all cpus
   unsigned long flags = 0;
 
-  if (fd_ == -1) { // group leader
-    int ret = perf_event_open(&pe, pid, cpu, fd_, flags);
-    if (-1 == ret) {
-      if (ENOENT == errno) {
-      }
-      fprintf(stderr, "error opening leader: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-    fd_ = ret;
+
+  int ret = perf_event_open(&pe, pid, cpu, fd_, flags);
+
+  if (-1 == ret) {
+    fprintf(stderr, "error opening event: %s\n", strerror(errno));
+    return;
   } else {
-    int ret = perf_event_open(&pe, pid, cpu, fd_, flags);
-    if (-1 == ret) {
-      if (ENOENT == errno) {
-        fprintf(stderr, "ENOENT attaching %llx to leader: %s\n", config,
-                strerror(errno));
-      } else {
-        fprintf(stderr, "error attaching %llx to leader: %s\n", config,
-                strerror(errno));
-        exit(EXIT_FAILURE);
-      }
-    } else {
-      fprintf(stderr, "attached %llx with fd = %ld\n", config, ret);
-    }
+    printf("attached type=%d config=%llu\n", type, config);
   }
+
+  // if no leader yet, this is our leader
+  if (-1 == fd_) {
+    fd_ = ret;
+  }
+
 }
 
 void EventGroup::reset() { ioctl(fd_, PERF_EVENT_IOC_RESET, 0); }
