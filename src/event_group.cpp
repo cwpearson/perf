@@ -14,16 +14,17 @@ EventGroup::EventGroup() : fd_(-1) {}
 
 EventGroup::~EventGroup() { close(fd_); }
 
-void EventGroup::add(unsigned int type, unsigned long long config) {
+void EventGroup::add(unsigned int type, unsigned long long config, unsigned long long config1) {
   struct perf_event_attr pe;
   std::memset(&pe, 0, sizeof(struct perf_event_attr));
   pe.size = sizeof(struct perf_event_attr);
   pe.type = type;
   pe.config = config;
+  pe.config1 = config1;
   pe.disabled = 1;
   pe.exclude_kernel = 1;
   pe.exclude_hv = 1;
-  pe.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
+  pe.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID | PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
 
   pid_t pid = 0; // current thread
   int cpu = -1;  // all cpus
@@ -32,8 +33,11 @@ void EventGroup::add(unsigned int type, unsigned long long config) {
 
   int ret = perf_event_open(&pe, pid, cpu, fd_, flags);
 
+    fprintf(stderr, "post-open: %s\n", strerror(errno));
+
   if (-1 == ret) {
     fprintf(stderr, "error opening event: %s\n", strerror(errno));
+    errno = 0;
     return;
   } else {
     printf("attached type=%d config=%llu\n", type, config);
@@ -46,7 +50,11 @@ void EventGroup::add(unsigned int type, unsigned long long config) {
 
 }
 
-void EventGroup::reset() { ioctl(fd_, PERF_EVENT_IOC_RESET, 0); }
+void EventGroup::reset() { 
+  // fprintf(stderr, "pre-reset(): %s\n", strerror(errno)); 
+  ioctl(fd_, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+  // fprintf(stderr, "post-reset(): %s\n", strerror(errno)); 
+}
 
 std::vector<long long> EventGroup::read() {
 
@@ -65,18 +73,24 @@ std::vector<long long> EventGroup::read() {
 
   while (-1 == ::read(fd_, readData.data(), readData.size())) {
     if (ENOSPC == errno) {
+      errno = 0;
       readData.resize(readData.size() + 16);
     } else {
       fprintf(stderr, "unexpected error\n");
+      exit(EXIT_FAILURE);
     }
   }
 
   const uint64_t *ptr = reinterpret_cast<uint64_t *>(readData.data());
   const uint64_t nr = ptr[0];
+  const uint64_t timeEnabled = ptr[1];
+  const uint64_t timeRunning = ptr[2];
+
+  // std::cerr << timeEnabled << " " << timeRunning << "\n";
 
   std::vector<long long> ret(nr);
   for (uint64_t i = 0; i < nr; ++i) {
-    ret[i] = ptr[1 + 2 * i];
+    ret[i] = ptr[3 + 2 * i];
   }
 
   return ret;

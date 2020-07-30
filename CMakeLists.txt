@@ -1,7 +1,7 @@
 # just need target_compile_options
 cmake_minimum_required(VERSION 3.13)
 
-project(perf LANGUAGES CXX)
+project(perf LANGUAGES CXX CUDA)
 
 include_directories(include)
 
@@ -12,6 +12,7 @@ src/event_group.cpp
 
 add_executable(example1 bin/example1.cpp ${PERF_SOURCES})
 add_executable(example2 bin/example2.cpp ${PERF_SOURCES})
+add_executable(example3 bin/example3.cu ${PERF_SOURCES})
 
 macro(add_cxx_opts)
 target_compile_options(${ARGV0} PRIVATE

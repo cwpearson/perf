@@ -26,20 +26,23 @@ public:
   EventGroup(EventGroup &&) = delete;
   EventGroup(const EventGroup &) = delete;
 
-  void add(unsigned int type, unsigned long long config);
+  void add(unsigned int type, unsigned long long config, unsigned long long config1=0);
 
   void reset();
 
   /* inline to avoid extra instructions
    */
   INLINE void enable() {
+    // fprintf(stderr, "pre-enable(): %s\n", strerror(errno));
     ioctl(fd_, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
-    fprintf(stderr, "enable(): %s\n", strerror(errno));
+    // fprintf(stderr, "post-enable(): %s\n", strerror(errno));
   }
   /* inline to avoid extra instructions
    */
   INLINE void disable() {
+    // fprintf(stderr, "pre-disable(): %s\n", strerror(errno));
     ioctl(fd_, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+    // fprintf(stderr, "post-disable(): %s\n", strerror(errno));
   }
 
   std::vector<long long> read();
